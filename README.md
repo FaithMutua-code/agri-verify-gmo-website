@@ -1,1 +1,1 @@
-Git clone https://github.com/melau-eddy/Agri-Verify
+Git clone https://github.com/FaithMutua-code/agri-verify-gmo-website
