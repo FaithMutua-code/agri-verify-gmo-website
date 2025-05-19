@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriVerify - GMO Information & Verification Portal</title>
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <script>tailwind.config={theme:{extend:{colors:{primary:'#2E7D32',secondary:'#689F38'},borderRadius:{'none':'0px','sm':'4px',DEFAULT:'8px','md':'12px','lg':'16px','xl':'20px','2xl':'24px','3xl':'32px','full':'9999px','button':'8px'}}}}</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+    <style>
+        :where([class^="ri-"])::before { content: "\f3c2"; }
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        .chat-container {
+            height: calc(100vh - 350px);
+            min-height: 400px;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a1a1aa;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #2E7D32;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .custom-checkbox {
+            position: relative;
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+        }
+        .custom-checkbox input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .checkmark {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 20px;
+            width: 20px;
+            background-color: #fff;
+            border: 2px solid #d1d5db;
+            border-radius: 4px;
+        }
+        .custom-checkbox input:checked ~ .checkmark {
+            background-color: #2E7D32;
+            border-color: #2E7D32;
+        }
+        .checkmark:after {
+            content: "";
+            position: absolute;
+            display: none;
+        }
+        .custom-checkbox input:checked ~ .checkmark:after {
+            display: block;
+        }
+        .custom-checkbox .checkmark:after {
+            left: 6px;
+            top: 2px;
+            width: 5px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #e5e7eb;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2E7D32;
+        }
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        .video-progress {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: #e5e7eb;
+            outline: none;
+        }
+        .video-progress::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #2E7D32;
+            cursor: pointer;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 flex items-center justify-center bg-primary rounded-full text-white">
+                    <i class="ri-plant-line ri-lg"></i>
+                </div>
+                <h1 class="text-2xl font-['Pacifico'] text-primary">AgriVerify</h1>
+            </div>
+            <div class="relative max-w-md w-full mx-4 hidden md:block">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="ri-search-line text-gray-400"></i>
+                </div>
+                <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-full bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" placeholder="Search for crops, products, or GMO information...">
+            </div>
+            <div class="flex items-center gap-4">
+                <button class="md:hidden w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full">
+                    <i class="ri-search-line ri-lg"></i>
+                </button>
+                 <a href="quiz" class="flex items-center justify-center text-gray-900 hover:bg-gray-100 rounded-full px-4 py-2 transition-colors duration-200">
+                    <i class="ri-question-line ri-lg"></i> 
+                    <span class="ml-2">Try quiz</span>
+                </a>
+                <button class="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full">
+                    <i class="ri-notification-3-line ri-lg"></i>
+                </button>
+
+                <!-- Container -->
+                <div class="relative inline-block text-left">
+                    <!-- User Icon Button -->
+                    <button id="userBtn" class="w-10 h-10 flex items-center justify-center bg-gray-200 rounded-full">
+                        <i class="ri-user-3-line ri-lg text-gray-700"></i>
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div id="dropdown" class="hidden absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10 text-black">
+                        <a href="{% url 'logout_view' %}" id="logoutBtn" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">
+                            Log out
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-10">
+        <div class="container mx-auto px-4 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-10 h-10 flex items-center justify-center bg-primary rounded-full text-white">
+                            <i class="ri-plant-line ri-lg"></i>
+                        </div>
+                        <h1 class="text-2xl font-['Pacifico'] text-primary">AgriVerify</h1>
+                    </div>
+                    <p class="text-gray-600 text-sm">The official platform for GMO product verification and agricultural information, supported by the Department of Agriculture.</p>
+                </div>
+                <div>
+                    <h3 class="font-medium mb-4">Government Resources</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-600 hover:text-primary text-sm flex items-center gap-2"><i class="ri-government-line"></i> Department of Agriculture</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary text-sm flex items-center gap-2"><i class="ri-file-list-3-line"></i> GMO Regulations</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary text-sm flex items-center gap-2"><i class="ri-shield-check-line"></i> Verification Process</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary text-sm flex items-center gap-2"><i class="ri-calendar-check-line"></i> Approval Timeline</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-medium mb-4">Help Center</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-600 hover:text-primary text-sm flex items-center gap-2"><i class="ri-question-line"></i> FAQs</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary text-sm flex items-center gap-2"><i class="ri-book-open-line"></i> Learning Resources</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary text-sm flex items-center gap-2"><i class="ri-chat-1-line"></i> Contact Support</a></li>
+                        <li>
+                            <a 
+                              href="{% url 'webinars' %}" 
+                              target="_blank"
+                              class="text-gray-600 hover:text-primary text-sm flex items-center gap-2"
+                            >
+                              <i class="ri-video-chat-line"></i> Webinars
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-medium mb-4">Contact Information</h3>
+                    <ul class="space-y-2">
+                        <li class="text-gray-600 text-sm flex items-center gap-2"><i class="ri-map-pin-line"></i> 1400 Independence Ave, Washington, DC</li>
+                        <li class="text-gray-600 text-sm flex items-center gap-2"><i class="ri-phone-line"></i> (202) 720-2791</li>
+                        <li class="text-gray-600 text-sm flex items-center gap-2"><i class="ri-mail-line"></i> info@agriverify.gov</li>
+                    </ul>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium mb-2">Language</h4>
+                        <div class="relative">
+                            <select class="appearance-none bg-white border border-gray-200 rounded-lg py-2 pl-4 pr-10 w-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                                <option>English</option>
+                                <option>kiswahili</option>
+                            </select>
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <i class="ri-arrow-down-s-line text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-200 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-gray-500 text-sm">© {% now "Y" %} AgriVerify. All rights reserved.</p>
+                <div class="flex items-center gap-4 mt-4 md:mt-0">
+                    <a href="#" class="text-gray-400 hover:text-primary">
+                        <i class="ri-facebook-fill ri-lg"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-primary">
+                        <i class="ri-twitter-x-fill ri-lg"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-primary">
+                        <i class="ri-instagram-fill ri-lg"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-primary">
+                        <i class="ri-youtube-fill ri-lg"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Verification Modal -->
+    <div id="verificationModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg max-w-lg w-full mx-4">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="font-medium text-lg">Product Verification</h3>
+                <button onclick="closeVerificationModal()" class="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full">
+                    <i class="ri-close-line"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="flex flex-col items-center mb-6">
+                    <div id="qrScanner" class="w-full aspect-square bg-gray-900 rounded-lg mb-4 relative hidden">
+                        <video id="qrVideo" class="w-full h-full object-cover rounded-lg"></video>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="w-48 h-48 border-2 border-primary rounded-lg"></div>
+                        </div>
+                    </div>
+                    <div id="verificationResult" class="w-full hidden">
+                        <div class="flex items-center gap-3 p-4 rounded-lg mb-4">
+                            <div id="verificationIcon" class="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full"></div>
+                            <div class="flex-1">
+                                <h4 id="verificationStatus" class="font-medium"></h4>
+                                <p id="verificationMessage" class="text-sm text-gray-500"></p>
+                            </div>
+                        </div>
+                        <div class="space-y-4 border-t border-gray-100 pt-4">
+                            <div>
+                                <h5 class="text-sm font-medium mb-2">Certification Details</h5>
+                                <div class="text-sm text-gray-600">
+                                    <p id="certificationId"></p>
+                                    <p id="certificationDate"></p>
+                                    <p id="certificationAuthority"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button id="scanQRBtn" onclick="startQRScanner()" class="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:border-primary !rounded-button">
+                        <div class="w-10 h-10 flex items-center justify-center bg-primary/10 text-primary rounded-full">
+                            <i class="ri-qr-scan-2-line"></i>
+                        </div>
+                        <span class="text-sm font-medium">Scan QR</span>
+                    </button>
+                    <button id="enterCodeBtn" onclick="showCodeInput()" class="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:border-primary !rounded-button">
+                        <div class="w-10 h-10 flex items-center justify-center bg-primary/10 text-primary rounded-full">
+                            <i class="ri-keyboard-box-line"></i>
+                        </div>
+                        <span class="text-sm font-medium">Enter Code</span>
+                    </button>
+                    <button id="uploadImageBtn" onclick="uploadImage()" class="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:border-primary !rounded-button">
+                        <div class="w-10 h-10 flex items-center justify-center bg-primary/10 text-primary rounded-full">
+                            <i class="ri-image-add-line"></i>
+                        </div>
+                        <span class="text-sm font-medium">Upload Image</span>
+                    </button>
+                </div>
+                <div id="codeInputSection" class="mt-4 hidden">
+                    <div class="relative">
+                        <input type="text" id="verificationCode" class="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter verification code">
+                        <button onclick="verifyCode()" class="absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 flex items-center justify-center text-primary">
+                            <i class="ri-arrow-right-line"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // User dropdown functionality
+        const userBtn = document.getElementById("userBtn");
+        const dropdown = document.getElementById("dropdown");
+        
+        userBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle("hidden");
+        });
+        
+        document.addEventListener("click", () => {
+            dropdown.classList.add("hidden");
+        });
+
+        // Verification modal functions
+        function openVerificationModal(button) {
+            const modal = document.getElementById('verificationModal');
+            modal.classList.remove('hidden');
+            resetModalState();
+        }
+        
+        function closeVerificationModal() {
+            const modal = document.getElementById('verificationModal');
+            modal.classList.add('hidden');
+            stopQRScanner();
+            resetModalState();
+        }
+        
+        function startQRScanner() {
+            const scanner = document.getElementById('qrScanner');
+            const video = document.getElementById('qrVideo');
+            scanner.classList.remove('hidden');
+            document.getElementById('codeInputSection').classList.add('hidden');
+            document.getElementById('verificationResult').classList.add('hidden');
+            
+            // In a real app, you'd use the device camera
+            // For demo purposes, we'll simulate a scan after 3 seconds
+            setTimeout(() => {
+                simulateSuccessfulScan();
+            }, 3000);
+        }
+        
+        function stopQRScanner() {
+            const video = document.getElementById('qrVideo');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+            document.getElementById('qrScanner').classList.add('hidden');
+        }
+        
+        function showCodeInput() {
+            document.getElementById('codeInputSection').classList.remove('hidden');
+            document.getElementById('qrScanner').classList.add('hidden');
+            document.getElementById('verificationResult').classList.add('hidden');
+            stopQRScanner();
+        }
+        
+        function uploadImage() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function(e) {
+                if (e.target.files.length > 0) {
+                    // In a real app, you'd process the image
+                    setTimeout(() => {
+                        verifyCode('123456'); // Simulate with a known good code
+                    }, 1500);
+                }
+            };
+            input.click();
+        }
+        
+        function verifyCode(code = null) {
+            const verificationCode = code || document.getElementById('verificationCode').value.trim();
+            
+            if (!verificationCode) return;
+            
+            fetch("{% url 'verify_product' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    method: document.getElementById('qrScanner').classList.contains('hidden') ? 
+                          (code ? 'image' : 'manual') : 'qr',
+                    code: verificationCode
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showVerificationResult(false, data.error);
+                } else {
+                    showVerificationResult(data.is_verified, data);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showVerificationResult(false, 'Verification failed. Please try again.');
+            });
+        }
+        
+        function simulateSuccessfulScan() {
+            stopQRScanner();
+            verifyCode('123456'); // Simulate with a known good code
+        }
+        
+        function showVerificationResult(isVerified, data = null) {
+            const result = document.getElementById('verificationResult');
+            const statusIcon = document.getElementById('verificationIcon');
+            const status = document.getElementById('verificationStatus');
+            const message = document.getElementById('verificationMessage');
+            const certId = document.getElementById('certificationId');
+            const certDate = document.getElementById('certificationDate');
+            const certAuth = document.getElementById('certificationAuthority');
+            
+            if (isVerified) {
+                statusIcon.className = 'w-12 h-12 flex-shrink-0 flex items-center justify-center bg-green-100 text-green-800 rounded-full';
+                statusIcon.innerHTML = '<i class="ri-check-line ri-lg"></i>';
+                status.textContent = 'Verification Successful';
+                status.className = 'font-medium text-green-800';
+                message.textContent = `${data.product_name} is a verified GMO product from ${data.company}`;
+                certId.textContent = 'Certification ID: ' + data.certification_id;
+                certDate.textContent = 'Certification Date: ' + data.certification_date;
+                certAuth.textContent = 'Certifying Authority: ' + data.certification_authority;
+            } else {
+                statusIcon.className = 'w-12 h-12 flex-shrink-0 flex items-center justify-center bg-red-100 text-red-800 rounded-full';
+                statusIcon.innerHTML = '<i class="ri-close-line ri-lg"></i>';
+                status.textContent = 'Verification Failed';
+                status.className = 'font-medium text-red-800';
+                message.textContent = data.error || 'Unable to verify the product. Please check the verification code or try scanning again.';
+                certId.textContent = '';
+                certDate.textContent = '';
+                certAuth.textContent = '';
+            }
+            
+            document.getElementById('qrScanner').classList.add('hidden');
+            document.getElementById('codeInputSection').classList.add('hidden');
+            result.classList.remove('hidden');
+        }
+        
+        function resetModalState() {
+            document.getElementById('qrScanner').classList.add('hidden');
+            document.getElementById('codeInputSection').classList.add('hidden');
+            document.getElementById('verificationResult').classList.add('hidden');
+            document.getElementById('verificationCode').value = '';
+            stopQRScanner();
+        }
+
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
