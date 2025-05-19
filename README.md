@@ -34,8 +34,8 @@ AgriVerify is a comprehensive web application designed to provide reliable infor
 - Some features may be incomplete
 ! UI/UX improvements ongoing
 # Next milestone: v1.0 release
-
-#Clone the repository:
+```
+Clone the repository:
    ```bash
    git clone
    https://github.com/FaithMutua-code/agri-verify-gmo-website
