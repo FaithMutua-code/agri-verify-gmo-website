@@ -42,6 +42,7 @@ Clone the repository:
    ```
 
 ## 🤝 Contributing
+1. Fork the project
 
 
 
