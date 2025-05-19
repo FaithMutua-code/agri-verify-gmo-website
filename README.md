@@ -2,7 +2,7 @@
 
 
 
-AgriVerify is a web application designed to provide information and verification services for GMO (Genetically Modified Organism) products in the agricultural sector. This platform is supported by the Department of Agriculture and serves as an official resource for farmers, distributors, and consumers.
+AgriVerify is a web application designed to provide information and verification services for GMO (Genetically Modified Organism) products in the agricultural sector. 
 
 ## Features
 
