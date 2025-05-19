@@ -39,3 +39,9 @@ Clone the repository:
    ```bash
    git clone
    https://github.com/FaithMutua-code/agri-verify-gmo-website
+   ```
+
+## 🤝 Contributing
+
+
+
