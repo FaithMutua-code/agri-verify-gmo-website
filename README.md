@@ -1,6 +1,6 @@
 # 🌱 AgriVerify - GMO Information & Verification Portal
 
-![AgriVerify Banner](https://github.com/FaithMutua-code/my-website/blob/144debb48a4cab1e81f43b391eeb631a9efda413/image/projs/agriverify.png) 
+![AgriVerify Banner](agriverify.png) 
 
 AgriVerify is a comprehensive web application designed to provide reliable information and verification services for Genetically Modified Organism (GMO) products in the agricultural sector.
 
