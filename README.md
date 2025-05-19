@@ -8,6 +8,7 @@ AgriVerify is a comprehensive web application designed to provide reliable infor
 
 | Feature | Description | Icon |
 |---------|-------------|------|
+| **🤖 AI Chatbot** | conversational assistant for GMO queries| 💬 |
 | **🔍 Product Verification** | Scan QR codes, enter verification codes, or upload images to verify GMO products | 📱 |
 | **📚 Educational Hub** | Access learning materials, webinars, and expert articles about GMO technology | 🎓 |
 | **🧠 Knowledge Quiz** | Interactive assessment tool to test your GMO knowledge | ✅ |
