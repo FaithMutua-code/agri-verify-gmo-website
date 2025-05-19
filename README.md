@@ -43,6 +43,7 @@ Clone the repository:
 
 ## 🤝 Contributing
 1. Fork the project
+2. Create your feature branch (git checkout -b feature/AmazingFeature)
 
 
 
