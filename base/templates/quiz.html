@@ -1,0 +1,379 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+    
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: #f5f7fa;
+    }
+    
+    .progress-bar {
+        transition: width 0.5s ease-in-out;
+    }
+    
+    .option:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .correct {
+        background-color: #4CAF50 !important;
+        color: white !important;
+    }
+    
+    .incorrect {
+        background-color: #F44336 !important;
+        color: white !important;
+    }
+    
+    .pulse {
+        animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    
+    .streak-counter {
+        background: linear-gradient(135deg, #FF9A8B 0%, #FF6B95 50%, #FF8E53 100%);
+    }
+    
+    .correct-answer {
+        background-color: #4CAF50;
+        color: white;
+        padding: 10px;
+        border-radius: 8px;
+        margin-top: 10px;
+        display: inline-block;
+    }
+</style>
+</head>
+<body class="min-h-screen flex flex-col">
+<!-- Header -->
+<header class="bg-green-600 text-white shadow-lg">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-leaf text-2xl"></i>
+            <h1 class="text-xl font-bold">GMO Kenya Quiz</h1>
+        </div>
+        <div class="streak-counter px-3 py-1 rounded-full text-white font-bold flex items-center">
+            <i class="fas fa-bolt mr-1"></i>
+            <span id="streak">0</span>
+        </div>
+    </div>
+</header>
+
+<!-- Main Content -->
+<main class="flex-grow container mx-auto px-4 py-8">
+    <!-- Progress Bar -->
+    <div class="mb-8">
+        <div class="flex justify-between mb-2">
+            <span class="text-sm font-medium text-gray-700">Progress</span>
+            <span class="text-sm font-medium text-gray-700"><span id="current-question">1</span>/10</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div id="progress" class="progress-bar bg-green-600 h-2.5 rounded-full" style="width: 10%"></div>
+        </div>
+    </div>
+
+    <!-- Question Card -->
+    <div id="question-card" class="bg-white rounded-xl shadow-lg p-6 mb-8 transition-all duration-300 pulse">
+        <div class="flex items-center mb-4">
+            <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-3">
+                <i class="fas fa-question"></i>
+            </div>
+            <h2 id="question-text" class="text-xl font-semibold text-gray-800">Are GMOs grown for commercial in the Kenya?</h2>
+        </div>
+        
+        <!-- Options Container -->
+        <div id="options-container" class="space-y-3">
+            <!-- Options will be inserted here by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Feedback Section (Initially Hidden) -->
+    <div id="feedback-section" class="hidden bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div class="flex items-start mb-4">
+            <div id="feedback-icon" class="w-10 h-10 rounded-full flex items-center justify-center mr-3 text-white">
+                <i class="fas fa-check"></i>
+            </div>
+            <div>
+                <h3 id="feedback-title" class="text-lg font-semibold">Correct!</h3>
+                <p id="feedback-text" class="text-gray-600">Currently in Kenya, GMOs are grown at a commercial scale. Example Bt Cotton which has been grown since 2020.</p>
+                <div id="correct-answer-container" class="mt-3 hidden">
+                    <p class="font-medium text-gray-700">The correct answer was:</p>
+                    <div id="correct-answer" class="correct-answer"></div>
+                </div>
+            </div>
+        </div>
+        <button id="next-button" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300">
+            Continue <i class="fas fa-arrow-right ml-2"></i>
+        </button>
+    </div>
+
+    <!-- Hearts (Lives) -->
+    <div class="flex justify-center space-x-4 mb-8">
+        <i id="heart1" class="fas fa-heart text-red-500 text-2xl"></i>
+        <i id="heart2" class="fas fa-heart text-red-500 text-2xl"></i>
+        <i id="heart3" class="fas fa-heart text-red-500 text-2xl"></i>
+    </div>
+</main>
+
+  <!-- Footer -->
+ 
+
+   <script>
+        // Quiz Data
+        const quizData = [
+            {
+                question: "Are GMOs grown for commercial in the Kenya?",
+                options: ["Yes", "No"],
+                answer: "Yes",
+                explanation: "Currently in Kenya, GMOs are grown at a commercial scale. Example Bt Cotton which has been grown since 2020."
+            },
+            {
+                question: "Which of the following crop is cleared for cultivation and commercialization in Kenya?",
+                options: ["Wheat", "Cotton", "Beans"],
+                answer: "Cotton",
+                explanation: ""
+            },
+            {
+                question: "Why is Cotton Genetically Modified in Kenya?",
+                options: ["Pest Resistant", "Increase Food Security", "Increase quality"],
+                answer: "Pest Resistant",
+                explanation: "For pest Resistance- Bt cotton is the available Modified cotton in Kenya. It is resistant against African Bollworm (Which is the most destructive pest in cotton)."
+            },
+            {
+                question: "Can GMOs grow big overnight?",
+                options: ["Yes", "No"],
+                answer: "No",
+                explanation: "The available GMOs are from germination not induced when the crop has fruited."
+            },
+            {
+                question: "Which Body is responsible for regulating GMOs in Kenya?",
+                options: [
+                    "Kenya Bureau of Standards (KEBS)",
+                    "National Biosafety Authority (NBA)",
+                    "Anti-counterfeit Agency (ACA)",
+                    "Kenya Agricultural and Livestock Research Organization (KALRO)"
+                ],
+                answer: "National Biosafety Authority (NBA)",
+                explanation: "Although all the above organizations are core at monitoring GMOs, NBA is the organization mandated to regulate GMOs under Biosafety act 2009."
+            },
+            {
+                question: "At what age should a person start consuming GMO?",
+                options: ["Below 5 years", "Above 18 years", "Any age"],
+                answer: "Any age",
+                explanation: "For GMOs products they are tested for all individuals regardless of age, race, social status."
+            },
+            {
+                question: "Do Genetically Modified Products cause cancer?",
+                options: ["Yes", "No"],
+                answer: "No",
+                explanation: "From the research done on the topic, GMOs do not cause cancer. Before release for commercialization, the product should prove beyond doubt that they have negative health effects. This include proving that the products do not cause tumors."
+            },
+            {
+                question: "Does the court ban a person from buying or consuming GMOs?",
+                options: ["Yes", "No"],
+                answer: "No",
+                explanation: "The Kenyan High Court Uplifted the ban against GMOs in 2024 after an existing 10 year ban. The court allowed for cultivation of GMOs in the cultivation."
+            },
+            {
+                question: "Which amongst the following is banned in regards to GMOs in Kenya?",
+                options: ["Cultivation", "Consumption", "Importation", "Commercialization"],
+                answer: "Importation",
+                explanation: "This follows the ruling by the Court of Appeal to bar the government from importing GMOs."
+            },
+            {
+                question: "Are there Genetically Modified Mosquitoes in Kenya natural environment?",
+                options: ["Yes", "No"],
+                answer: "No",
+                explanation: "Genetically Modified Mosquitoes are strictly done in the laboratory not open in the environment."
+            }
+        ];
+
+        // DOM Elements
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackSection = document.getElementById('feedback-section');
+        const feedbackTitle = document.getElementById('feedback-title');
+        const feedbackText = document.getElementById('feedback-text');
+        const feedbackIcon = document.getElementById('feedback-icon');
+        const nextButton = document.getElementById('next-button');
+        const progressBar = document.getElementById('progress');
+        const currentQuestionDisplay = document.getElementById('current-question');
+        const streakDisplay = document.getElementById('streak');
+        const questionCard = document.getElementById('question-card');
+        const correctAnswerContainer = document.getElementById('correct-answer-container');
+        const correctAnswerDisplay = document.getElementById('correct-answer');
+        const heart1 = document.getElementById('heart1');
+        const heart2 = document.getElementById('heart2');
+        const heart3 = document.getElementById('heart3');
+
+        // Quiz State
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let lives = 3;
+        let streak = 0;
+        let answeredCorrectly = false;
+
+        // Initialize the quiz
+        function initQuiz() {
+            showQuestion();
+            updateHearts();
+        }
+
+        // Display the current question
+        function showQuestion() {
+            const question = quizData[currentQuestionIndex];
+            questionText.textContent = question.question;
+            
+            // Clear previous options
+            optionsContainer.innerHTML = '';
+            
+            // Add new options
+            question.options.forEach((option, index) => {
+                const optionElement = document.createElement('button');
+                optionElement.className = 'option w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition duration-300 flex items-center';
+                optionElement.innerHTML = `
+                    <span class="w-6 h-6 rounded-full bg-white flex items-center justify-center mr-3">${String.fromCharCode(65 + index)}</span>
+                    ${option}
+                `;
+                optionElement.addEventListener('click', () => selectOption(option));
+                optionsContainer.appendChild(optionElement);
+            });
+            
+            // Update progress
+            currentQuestionDisplay.textContent = currentQuestionIndex + 1;
+            progressBar.style.width = `${((currentQuestionIndex + 1) / quizData.length) * 100}%`;
+            
+            // Reset UI for new question
+            feedbackSection.classList.add('hidden');
+            correctAnswerContainer.classList.add('hidden');
+            questionCard.classList.remove('hidden');
+            questionCard.classList.add('pulse');
+        }
+
+        // Update heart display
+        function updateHearts() {
+            heart1.style.opacity = lives >= 1 ? "1" : "0.3";
+            heart2.style.opacity = lives >= 2 ? "1" : "0.3";
+            heart3.style.opacity = lives >= 3 ? "1" : "0.3";
+        }
+
+        // Handle option selection
+        function selectOption(selectedOption) {
+            const question = quizData[currentQuestionIndex];
+            const options = document.querySelectorAll('.option');
+            
+            // Disable all options
+            options.forEach(option => {
+                option.disabled = true;
+            });
+            
+            // Check if answer is correct
+            if (selectedOption === question.answer) {
+                // Correct answer
+                answeredCorrectly = true;
+                streak++;
+                streakDisplay.textContent = streak;
+                score++;
+                
+                // Highlight correct option
+                options.forEach(option => {
+                    if (option.textContent.trim().includes(question.answer)) {
+                        option.classList.add('correct');
+                    }
+                });
+                
+                // Show feedback
+                showFeedback(true, question.explanation);
+            } else {
+                // Incorrect answer
+                answeredCorrectly = false;
+                streak = 0;
+                streakDisplay.textContent = streak;
+                lives--;
+                updateHearts();
+                
+                // Highlight correct and incorrect options
+                options.forEach(option => {
+                    if (option.textContent.trim().includes(question.answer)) {
+                        option.classList.add('correct');
+                    } else if (option.textContent.trim().includes(selectedOption)) {
+                        option.classList.add('incorrect');
+                    }
+                });
+                
+                // Show feedback with correct answer
+                showFeedback(false, question.explanation);
+                correctAnswerContainer.classList.remove('hidden');
+                correctAnswerDisplay.textContent = question.answer;
+            }
+            
+            // Remove pulse animation
+            questionCard.classList.remove('pulse');
+        }
+
+        // Show feedback after answering
+        function showFeedback(isCorrect, explanation) {
+            if (isCorrect) {
+                feedbackTitle.textContent = "Correct!";
+                feedbackText.textContent = explanation;
+                feedbackIcon.className = "w-10 h-10 rounded-full bg-green-500 flex items-center justify-center mr-3 text-white";
+                feedbackIcon.innerHTML = '<i class="fas fa-check"></i>';
+            } else {
+                feedbackTitle.textContent = "Incorrect";
+                feedbackText.textContent = explanation;
+                feedbackIcon.className = "w-10 h-10 rounded-full bg-red-500 flex items-center justify-center mr-3 text-white";
+                feedbackIcon.innerHTML = '<i class="fas fa-times"></i>';
+            }
+            
+            questionCard.classList.add('hidden');
+            feedbackSection.classList.remove('hidden');
+        }
+
+        // Move to next question or show results
+        nextButton.addEventListener('click', () => {
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex < quizData.length && lives > 0) {
+                showQuestion();
+            } else {
+                // Quiz completed
+                showResults();
+            }
+        });
+
+        // Show final results
+        function showResults() {
+            questionCard.classList.add('hidden');
+            feedbackSection.classList.remove('hidden');
+            
+            feedbackTitle.textContent = "Quiz Completed!";
+            feedbackText.textContent = `You scored ${score} out of ${quizData.length} questions correctly.`;
+            feedbackIcon.className = "w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center mr-3 text-white";
+            feedbackIcon.innerHTML = '<i class="fas fa-trophy"></i>';
+            
+            nextButton.textContent = "Restart Quiz";
+            nextButton.addEventListener('click', () => {
+                currentQuestionIndex = 0;
+                score = 0;
+                lives = 3;
+                streak = 0;
+                streakDisplay.textContent = streak;
+                updateHearts();
+                initQuiz();
+            }, { once: true });
+        }
+
+        // Start the quiz
+        initQuiz();
+    </script>
+</body>
+
+{% endblock %}
