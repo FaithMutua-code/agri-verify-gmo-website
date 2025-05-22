@@ -1,0 +1,785 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left Column - Chat Interface -->
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <!-- Header remains the same -->
+            <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 flex items-center justify-center bg-primary/10 text-primary rounded-full">
+                        <i class="ri-robot-line ri-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-medium">AgriBot Assistant</h2>
+                        <p class="text-xs text-gray-500">Agricultural Expert AI</p>
+                    </div>
+                </div>
+                <div>
+                    <button class="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-100 rounded-full">
+                        <i class="ri-more-2-fill"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Chat Container -->
+            <div class="chat-container overflow-y-auto custom-scrollbar p-4" id="messageArea" style="height: 500px;">
+                <!-- AI Welcome Message -->
+                <div class="flex gap-3 mb-6">
+                    <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary/10 text-primary rounded-full mt-1">
+                        <i class="ri-robot-line"></i>
+                    </div>
+                    <div class="bg-gray-100 rounded-lg rounded-tl-none p-3 max-w-[80%]">
+                        <p class="text-gray-800">Hello! I'm your AgriBot assistant. How can I help you with GMO information or product verification today?</p>
+                    </div>
+                </div>
+                
+                {% for message in recent_messages %}
+                    <!-- Existing message display code remains the same -->
+                    <div class="flex gap-3 mb-6 {% if not message.response %}justify-end{% endif %}">
+                        {% if not message.response %}
+                            <div class="bg-primary text-white rounded-lg rounded-tr-none p-3 max-w-[80%]">
+                                <p>{{ message.message }}</p>
+                            </div>
+                            <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-gray-200 rounded-full mt-1">
+                                <i class="ri-user-3-line text-gray-700"></i>
+                            </div>
+                        {% else %}
+                            <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary/10 text-primary rounded-full mt-1">
+                                <i class="ri-robot-line"></i>
+                            </div>
+                            <div class="bg-gray-100 rounded-lg rounded-tl-none p-3 max-w-[80%]">
+                                <p class="text-gray-800 whitespace-pre-line">{{ message.response }}</p>
+                                <div class="mt-2 flex gap-2">
+                                    <button onclick="sendFeedback({{ message.id }}, true)" class="text-xs text-gray-500 hover:text-green-600">
+                                        <i class="ri-thumb-up-line"></i> Helpful
+                                    </button>
+                                    <button onclick="sendFeedback({{ message.id }}, false)" class="text-xs text-gray-500 hover:text-red-600">
+                                        <i class="ri-thumb-down-line"></i> Not helpful
+                                    </button>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                
+                <!-- Quick Suggestions -->
+                <div class="flex flex-wrap gap-2 mb-6 pl-11" id="suggestions">
+                    <button onclick="sendSuggestion('GMO regulations in my area')" class="bg-white border border-gray-200 hover:border-primary text-gray-700 px-3 py-1.5 rounded-full text-sm !rounded-button whitespace-nowrap">GMO regulations</button>
+                    <button onclick="sendSuggestion('How to verify seed authenticity')" class="bg-white border border-gray-200 hover:border-primary text-gray-700 px-3 py-1.5 rounded-full text-sm !rounded-button whitespace-nowrap">Verify seeds</button>
+                    <button onclick="sendSuggestion('Benefits of GMO corn')" class="bg-white border border-gray-200 hover:border-primary text-gray-700 px-3 py-1.5 rounded-full text-sm !rounded-button whitespace-nowrap">GMO benefits</button>
+                </div>
+            </div>
+            
+            <!-- Input Area -->
+            <div class="p-3 border-t border-gray-100">
+                <div class="relative">
+                    <input type="text" id="userInput" class="w-full pl-4 pr-16 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Type your question about GMOs..." onkeypress="handleKeyPress(event)">
+                    <div class="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+                        <button class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-primary">
+                            <i class="ri-image-add-line"></i>
+                        </button>
+                        <button class="w-8 h-8 flex items-center justify-center bg-primary text-white rounded-full" onclick="sendChatMessage()">
+                            <i class="ri-send-plane-fill"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add this JavaScript at the end of your template -->
+        <script>
+        // Global variable to store conversation context
+        let chatContext = {};
+        
+        function sendChatMessage() {
+    const userInput = document.getElementById('userInput');
+    const message = userInput.value.trim();
+    
+    if (!message) return;
+    
+    // Add user message to chat immediately
+    addMessageToChat(message, false);
+    userInput.value = '';
+    
+    // Show loading indicator
+    showLoadingIndicator();
+    
+    // First try to handle locally without API call for common questions
+    const quickResponse = tryLocalResponse(message, chatContext);
+    if (quickResponse) {
+        setTimeout(() => {
+            removeLoadingIndicator();
+            addMessageToChat(quickResponse.answer, true);
+            updateSuggestions(getRelatedSuggestions(quickResponse.context?.last_topic));
+            chatContext = quickResponse.context || {};
+        }, 500); // Small delay for better UX
+        return;
+    }
+    
+    // Send to server for more complex handling
+    fetch('/chat/api/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            message: message,
+            context: chatContext
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        removeLoadingIndicator();
+        
+        if (data.error) {
+            showError(data.error);
+            return;
+        }
+        
+        // Update context
+        chatContext = data.context || {};
+        
+        // Add response to chat
+        addMessageToChat(data.response, true, data.message_id);
+        
+        // Update suggestions
+        updateSuggestions(data.suggestions || getDefaultSuggestions());
+        
+        // Auto-scroll to bottom
+        scrollToBottom();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        removeLoadingIndicator();
+        
+        // Fallback to local responses if server fails
+        const fallbackResponse = getFallbackResponse(message);
+        if (fallbackResponse) {
+            addMessageToChat(fallbackResponse.answer, true);
+            updateSuggestions(fallbackResponse.suggestions);
+        } else {
+            showError("I'm having trouble responding. Please try again later.");
+        }
+    });
+}
+
+// Local response handling functions
+function tryLocalResponse(message, context) {
+    const commonQuestions = {
+        "hello": { answer: "Hello! How can I help you with GMO information today?", context: {} },
+        "hi": { answer: "Hi there! Ask me anything about genetically modified organisms.", context: {} },
+        "thanks": { answer: "You're welcome! Let me know if you have any other GMO questions.", context: {} }
+    };
+    
+    const lowerMsg = message.toLowerCase();
+    if (commonQuestions[lowerMsg]) {
+        return commonQuestions[lowerMsg];
+    }
+    
+    return null;
+}
+
+function getFallbackResponse(message) {
+    // Simple keyword matching for critical fallback
+    if (message.includes('gmo') || message.includes('genetic')) {
+        return {
+            answer: "I'm currently unable to access detailed information. Here are some general GMO facts: " +
+                   "GMOs are organisms whose genetic material has been altered using genetic engineering techniques. " +
+                   "Common GMO crops include corn, soybeans, and cotton.",
+            suggestions: ["What crops are GMO?", "Are GMOs safe?", "GMO regulations"]
+        };
+    }
+    return null;
+}
+
+function getDefaultSuggestions() {
+    return [
+        "What are the benefits of GMOs?",
+        "How to identify GMO foods?",
+        "List of GMO crops",
+        "GMO safety studies"
+    ];
+}
+
+function scrollToBottom() {
+    const messageArea = document.getElementById('messageArea');
+    messageArea.scrollTop = messageArea.scrollHeight;
+}
+        
+        function sendSuggestion(suggestion) {
+            document.getElementById('userInput').value = suggestion;
+            sendChatMessage();
+        }
+        
+        function sendFeedback(messageId, isHelpful) {
+            fetch('/chat/feedback/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    message_id: messageId,
+                    is_helpful: isHelpful
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error(data.error);
+                } else {
+                    // Visual feedback
+                    const feedbackBtn = document.querySelector(`button[onclick="sendFeedback(${messageId}, ${isHelpful})"]`);
+                    feedbackBtn.innerHTML = isHelpful 
+                        ? '<i class="ri-thumb-up-fill text-green-600"></i> Thank you!' 
+                        : '<i class="ri-thumb-down-fill text-red-600"></i> Noted!';
+                }
+            });
+        }
+        
+        // Helper functions
+        function addMessageToChat(message, isBot, messageId = null) {
+            const messageArea = document.getElementById('messageArea');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex gap-3 mb-6 ${isBot ? '' : 'justify-end'}`;
+            
+            if (isBot) {
+                messageDiv.innerHTML = `
+                    <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary/10 text-primary rounded-full mt-1">
+                        <i class="ri-robot-line"></i>
+                    </div>
+                    <div class="bg-gray-100 rounded-lg rounded-tl-none p-3 max-w-[80%]">
+                        <p class="text-gray-800 whitespace-pre-line">${message}</p>
+                        ${messageId ? `
+                        <div class="mt-2 flex gap-2">
+                            <button onclick="sendFeedback(${messageId}, true)" class="text-xs text-gray-500 hover:text-green-600">
+                                <i class="ri-thumb-up-line"></i> Helpful
+                            </button>
+                            <button onclick="sendFeedback(${messageId}, false)" class="text-xs text-gray-500 hover:text-red-600">
+                                <i class="ri-thumb-down-line"></i> Not helpful
+                            </button>
+                        </div>` : ''}
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="bg-primary text-white rounded-lg rounded-tr-none p-3 max-w-[80%]">
+                        <p>${message}</p>
+                    </div>
+                    <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-gray-200 rounded-full mt-1">
+                        <i class="ri-user-3-line text-gray-700"></i>
+                    </div>
+                `;
+            }
+            
+            messageArea.appendChild(messageDiv);
+            messageArea.scrollTop = messageArea.scrollHeight;
+        }
+        
+        function showLoadingIndicator() {
+            const messageArea = document.getElementById('messageArea');
+            const loader = document.createElement('div');
+            loader.className = 'flex gap-3 mb-6';
+            loader.id = 'loadingIndicator';
+            loader.innerHTML = `
+                <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary/10 text-primary rounded-full mt-1">
+                    <i class="ri-robot-line"></i>
+                </div>
+                <div class="bg-gray-100 rounded-lg rounded-tl-none p-3 max-w-[80%]">
+                    <div class="flex gap-2">
+                        <div class="dot-flashing"></div>
+                    </div>
+                </div>
+            `;
+            messageArea.appendChild(loader);
+            messageArea.scrollTop = messageArea.scrollHeight;
+        }
+        
+        function removeLoadingIndicator() {
+            const loader = document.getElementById('loadingIndicator');
+            if (loader) {
+                loader.remove();
+            }
+        }
+        
+        function updateSuggestions(suggestions) {
+            const container = document.getElementById('suggestions');
+            container.innerHTML = '';
+            
+            suggestions.forEach(suggestion => {
+                const button = document.createElement('button');
+                button.className = 'bg-white border border-gray-200 hover:border-primary text-gray-700 px-3 py-1.5 rounded-full text-sm !rounded-button whitespace-nowrap';
+                button.textContent = suggestion;
+                button.onclick = () => sendSuggestion(suggestion);
+                container.appendChild(button);
+            });
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        function showError(message) {
+            const messageArea = document.getElementById('messageArea');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'flex gap-3 mb-6';
+            errorDiv.innerHTML = `
+                <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-red-100 text-red-600 rounded-full mt-1">
+                    <i class="ri-error-warning-line"></i>
+                </div>
+                <div class="bg-red-50 text-red-800 rounded-lg rounded-tl-none p-3 max-w-[80%]">
+                    <p>${message}</p>
+                </div>
+            `;
+            messageArea.appendChild(errorDiv);
+            messageArea.scrollTop = messageArea.scrollHeight;
+        }
+        
+        // Add CSS for loading animation
+        const style = document.createElement('style');
+        style.textContent = `
+        .dot-flashing {
+            position: relative;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #6b7280;
+            color: #6b7280;
+            animation: dotFlashing 1s infinite linear alternate;
+            animation-delay: 0.5s;
+        }
+        .dot-flashing::before, .dot-flashing::after {
+            content: '';
+            display: inline-block;
+            position: absolute;
+            top: 0;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #6b7280;
+            color: #6b7280;
+        }
+        .dot-flashing::before {
+            left: -15px;
+            animation: dotFlashing 1s infinite alternate;
+            animation-delay: 0s;
+        }
+        .dot-flashing::after {
+            left: 15px;
+            animation: dotFlashing 1s infinite alternate;
+            animation-delay: 1s;
+        }
+        @keyframes dotFlashing {
+            0% { background-color: #6b7280; }
+            50%, 100% { background-color: #d1d5db; }
+        }
+        `;
+        document.head.appendChild(style);
+        </script>
+        
+        
+        
+        <!-- Educational Content Section -->
+        <!-- Video Section -->
+<div class="mt-6 bg-white rounded-lg shadow-sm overflow-hidden">
+    <div class="p-4 border-b border-gray-100">
+        <h2 class="font-medium text-lg">Educational Resources</h2>
+    </div>
+    <div class="p-4">
+        <!-- Main Featured Video -->
+        <div class="relative aspect-video bg-gray-900 rounded-lg overflow-hidden mb-4">
+            {% if featured_video and featured_video.video_file %}
+                <video id="mainVideo" class="w-full h-full object-cover" preload="metadata">
+                    <source src="{{ featured_video.video_file.url }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div id="videoOverlay" class="absolute inset-0 bg-black/40 flex items-center justify-center cursor-pointer">
+                    <button id="bigPlayButton" class="w-16 h-16 flex items-center justify-center bg-white/20 backdrop-blur-sm rounded-full text-white">
+                        <i class="ri-play-fill ri-2x"></i>
+                    </button>
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                    <h3 class="text-white font-medium">{{ featured_video.title }}</h3>
+                    <p class="text-white/80 text-sm">{{ featured_video.duration|default:"00:00" }} • {{ featured_video.source|default:"Local Upload" }}</p>
+                </div>
+            {% else %}
+                <!-- Fallback if no featured video -->
+                <div class="w-full h-full flex items-center justify-center bg-gray-800 text-white">
+                    <p>No featured video available</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Video Controls (only show if video exists) -->
+        {% if featured_video and featured_video.video_file %}
+        <div class="flex items-center gap-3 mb-6">
+            <button class="w-10 h-10 flex items-center justify-center text-gray-700 hover:bg-gray-100 rounded-full" onclick="mainVideo.currentTime = Math.max(0, mainVideo.currentTime - 10)">
+                <i class="ri-rewind-mini-fill ri-lg"></i>
+            </button>
+            <button class="w-12 h-12 flex items-center justify-center bg-primary text-white rounded-full" onclick="togglePlay()">
+                <i class="ri-play-fill ri-lg"></i>
+            </button>
+            <button class="w-10 h-10 flex items-center justify-center text-gray-700 hover:bg-gray-100 rounded-full" onclick="mainVideo.currentTime = Math.min(mainVideo.duration, mainVideo.currentTime + 10)">
+                <i class="ri-speed-mini-fill ri-lg"></i>
+            </button>
+            <div class="flex-1 ml-2">
+                <input type="range" class="video-progress" min="0" max="100" value="0" onchange="mainVideo.currentTime = (this.value / 100) * mainVideo.duration">
+            </div>
+            <span class="text-sm text-gray-500" id="timeDisplay">0:00 / {{ featured_video.duration|default:"00:00" }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Related Videos -->
+        <h3 class="font-medium mb-3">Related Videos</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {% for resource in educational_resources %}
+                {% if resource.resource_type == 'video' and resource.video_file %}
+                <div class="group cursor-pointer" onclick="changeFeaturedVideo('{{ resource.video_file.url }}', '{{ resource.title }}', '{{ resource.duration|default:"00:00" }}')">
+                    <div class="relative aspect-video bg-gray-200 rounded-lg overflow-hidden mb-2">
+                        {% if resource.thumbnail %}
+                            <img src="{{ resource.thumbnail.url }}" alt="{{ resource.title }}" class="w-full h-full object-cover">
+                        {% else %}
+                            <div class="w-full h-full flex items-center justify-center bg-gray-300">
+                                <i class="ri-video-line ri-3x text-gray-500"></i>
+                            </div>
+                        {% endif %}
+                        <div class="absolute inset-0 bg-black/20 group-hover:bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i class="ri-play-fill ri-2x text-white"></i>
+                        </div>
+                    </div>
+                    <h4 class="text-sm font-medium">{{ resource.title }}</h4>
+                    <p class="text-xs text-gray-500">{{ resource.duration|default:"00:00" }} • {{ resource.source|default:"Local Upload" }}</p>
+                </div>
+                {% endif %}
+            {% empty %}
+                <div class="col-span-3 text-center py-4 text-gray-500">
+                    No video resources available
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+        
+        <script>
+        // Video player functionality
+        let mainVideo = document.getElementById('mainVideo');
+        
+        function togglePlay() {
+            if (mainVideo.paused) {
+                mainVideo.play();
+                document.querySelector('.w-12.h-12.flex.items-center.justify-center.bg-primary i').classList.remove('ri-play-fill');
+                document.querySelector('.w-12.h-12.flex.items-center.justify-center.bg-primary i').classList.add('ri-pause-fill');
+            } else {
+                mainVideo.pause();
+                document.querySelector('.w-12.h-12.flex.items-center.justify-center.bg-primary i').classList.remove('ri-pause-fill');
+                document.querySelector('.w-12.h-12.flex.items-center.justify-center.bg-primary i').classList.add('ri-play-fill');
+            }
+        }
+        
+        function changeFeaturedVideo(videoUrl, title, duration) {
+            mainVideo.src = videoUrl;
+            document.querySelector('.absolute.bottom-0.left-0.right-0.p-4.bg-gradient-to-t.from-black\\/80.to-transparent h3').textContent = title;
+            document.querySelector('.absolute.bottom-0.left-0.right-0.p-4.bg-gradient-to-t.from-black\\/80.to-transparent p').textContent = duration + ' • Local Upload';
+            document.getElementById('duration').textContent = duration;
+            document.getElementById('timeDisplay').textContent = '0:00 / ' + duration;
+            mainVideo.load();
+        }
+        
+        // Update time display
+        if (mainVideo) {
+            mainVideo.addEventListener('timeupdate', function() {
+                const currentMinutes = Math.floor(mainVideo.currentTime / 60);
+                const currentSeconds = Math.floor(mainVideo.currentTime % 60).toString().padStart(2, '0');
+                const durationMinutes = Math.floor(mainVideo.duration / 60);
+                const durationSeconds = Math.floor(mainVideo.duration % 60).toString().padStart(2, '0');
+                
+                document.getElementById('timeDisplay').textContent = `${currentMinutes}:${currentSeconds} / ${durationMinutes}:${durationSeconds}`;
+                
+                const progress = (mainVideo.currentTime / mainVideo.duration) * 100;
+                document.querySelector('.video-progress').value = progress;
+            });
+        }
+        </script>
+    </div>
+    
+    <!-- Right Column - Verification Tools & Products -->
+    <div>
+        <!-- QR Scanner Section -->
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+            <div class="p-4 border-b border-gray-100">
+                <h2 class="font-medium text-lg">Product Verification</h2>
+            </div>
+            <div class="p-6 flex flex-col items-center">
+                <div class="w-20 h-20 flex items-center justify-center bg-primary/10 text-primary rounded-full mb-4">
+                    <i class="ri-qr-scan-2-line ri-2x"></i>
+                </div>
+                <h3 class="font-medium text-center mb-2">Scan QR Code to Verify</h3>
+                <p class="text-sm text-gray-500 text-center mb-4">Quickly verify if a GMO product is government-approved</p>
+                <button class="bg-primary text-white px-6 py-3 rounded-lg flex items-center gap-2 !rounded-button whitespace-nowrap" onclick="openVerificationModal(this)">
+                    <i class="ri-camera-line"></i>
+                    <span>Scan Product</span>
+                </button>
+            </div>
+        </div>
+        
+        
+        <!-- Verified Products List -->
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+                <h2 class="font-medium text-lg">Verified Products</h2>
+                <a href="#" class="text-primary text-sm font-medium">View All</a>
+            </div>
+            <div class="divide-y divide-gray-100">
+                {% for product in verified_products %}
+                <div class="p-4 flex gap-3">
+                    <div class="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                        {% if product.image %}
+                            <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
+                        {% else %}
+                            <img src="https://readdy.ai/api/search-image?query={{ product.name|urlencode }}&width=64&height=64&seq=1&orientation=squarish" alt="{{ product.name }}" class="w-full h-full object-cover">
+                        {% endif %}
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-medium">{{ product.name }}</h3>
+                            <div class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">Verified</div>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1">{{ product.description }}</p>
+                        <div class="flex items-center gap-4 mt-2">
+                            <button class="text-primary text-sm font-medium flex items-center gap-1">
+                                <i class="ri-information-line"></i>
+                                <span>Details</span>
+                            </button>
+                            <a href="{% url 'product_detail' product.id %}" class="text-primary text-sm font-medium flex items-center gap-1">
+                                <i class="ri-qr-code-line"></i>
+                                <span>Verify</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Directory Section -->
+<div class="mt-8 bg-white rounded-lg shadow-sm overflow-hidden">
+    <div class="p-4 border-b border-gray-100">
+        <h2 class="font-medium text-lg">Government-Verified GMO Products</h2>
+    </div>
+    <div class="p-4">
+        <!-- Filters -->
+        <div class="flex flex-wrap gap-4 mb-6">
+            <div class="relative">
+                <select class="appearance-none bg-white border border-gray-200 rounded-lg py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" onchange="filterProducts()" id="cropTypeFilter">
+                    <option value="">All Crop Types</option>
+                    <option value="corn">Corn</option>
+                    <option value="soybeans">Soybeans</option>
+                    <option value="cotton">Cotton</option>
+                    <option value="canola">Canola</option>
+                    <option value="rice">Rice</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <i class="ri-arrow-down-s-line text-gray-400"></i>
+                </div>
+            </div>
+            <div class="relative">
+                <select class="appearance-none bg-white border border-gray-200 rounded-lg py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" onchange="filterProducts()" id="seasonFilter">
+                    <option value="">All Seasons</option>
+                    <option value="spring">Spring</option>
+                    <option value="summer">Summer</option>
+                    <option value="fall">Fall</option>
+                    <option value="winter">Winter</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <i class="ri-arrow-down-s-line text-gray-400"></i>
+                </div>
+            </div>
+            <div class="relative">
+                <select class="appearance-none bg-white border border-gray-200 rounded-lg py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" onchange="filterProducts()" id="regionFilter">
+                    <option value="">All Regions</option>
+                    <option value="northeast">Northeast</option>
+                    <option value="southeast">Southeast</option>
+                    <option value="midwest">Midwest</option>
+                    <option value="southwest">Southwest</option>
+                    <option value="west">West</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <i class="ri-arrow-down-s-line text-gray-400"></i>
+                </div>
+            </div>
+            <div class="relative">
+                <select class="appearance-none bg-white border border-gray-200 rounded-lg py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" onchange="filterProducts()" id="statusFilter">
+                    <option value="">All Verification Status</option>
+                    <option value="verified">Verified</option>
+                    <option value="pending">Pending</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <i class="ri-arrow-down-s-line text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Products Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" id="productGrid">
+            {% for product in page_obj %}
+            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                <div class="relative aspect-square bg-gray-100">
+                    {% if product.image %}
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover">
+                    {% else %}
+                        <img src="https://readdy.ai/api/search-image?query={{ product.name|urlencode }}&width=300&height=300&seq=1&orientation=squarish" alt="{{ product.name }}" class="w-full h-full object-cover">
+                    {% endif %}
+                    <div class="absolute top-2 right-2 {% if product.verification_status == 'verified' %}bg-green-100 text-green-800{% elif product.verification_status == 'pending' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %} text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <i class="ri-{% if product.verification_status == 'verified' %}check{% elif product.verification_status == 'pending' %}time{% else %}close{% endif %}-line"></i>
+                        <span>{{ product.get_verification_status_display }}</span>
+                    </div>
+                </div>
+                <div class="p-3">
+                    <h3 class="font-medium">{{ product.name }}</h3>
+                    <p class="text-xs text-gray-500 mt-1">{{ product.company }}</p>
+                    <div class="flex items-center gap-2 mt-2">
+                        <div class="flex items-center gap-1 text-xs text-gray-500">
+                            <i class="ri-plant-line"></i>
+                            <span>{{ product.get_crop_type_display }}</span>
+                        </div>
+                        <div class="w-1 h-1 bg-gray-300 rounded-full"></div>
+                        <div class="flex items-center gap-1 text-xs text-gray-500">
+                            <i class="ri-sun-line"></i>
+                            <span>{{ product.get_season_display }}</span>
+                        </div>
+                    </div>
+                    <a href="{% if product.verification_status == 'verified' %}{% url 'product_detail' product.id %}{% else %}{% url 'product_status' product.id %}{% endif %}"
+                    class="mt-3 w-full {% if product.verification_status == 'verified' %}bg-primary text-white{% else %}bg-gray-200 text-gray-700{% endif %} py-2 rounded-lg flex items-center justify-center gap-1 !rounded-button whitespace-nowrap no-underline">
+                        <i class="ri-{% if product.verification_status == 'verified' %}qr-code{% else %}information{% endif %}-line"></i>
+                        <span>{% if product.verification_status == 'verified' %}Verify Product{% else %}View Status{% endif %}</span>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        <div class="mt-6 flex justify-center">
+            <div class="flex items-center gap-1" id="pagination">
+                {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}" class="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full" id="prevPage">
+                        <i class="ri-arrow-left-s-line"></i>
+                    </a>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                        <span class="w-8 h-8 flex items-center justify-center bg-primary text-white rounded-full" data-page="{{ num }}">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <a href="?page={{ num }}" class="w-8 h-8 flex items-center justify-center text-gray-700 hover:bg-gray-100 rounded-full" data-page="{{ num }}">{{ num }}</a>
+                    {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+                        <span class="w-8 h-8 flex items-center justify-center text-gray-500">...</span>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full" id="nextPage">
+                        <i class="ri-arrow-right-s-line"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+
+
+
+
+    // Video player functionality
+    const mainVideo = document.getElementById('mainVideo');
+    const playButton = document.querySelector('.w-12.h-12.flex.items-center.justify-center.bg-primary');
+    
+    function togglePlay() {
+        if (mainVideo.paused) {
+            mainVideo.play();
+            playButton.querySelector('i').classList.remove('ri-play-fill');
+            playButton.querySelector('i').classList.add('ri-pause-fill');
+        } else {
+            mainVideo.pause();
+            playButton.querySelector('i').classList.remove('ri-pause-fill');
+            playButton.querySelector('i').classList.add('ri-play-fill');
+        }
+    }
+    
+    mainVideo.addEventListener('play', function() {
+        playButton.querySelector('i').classList.remove('ri-play-fill');
+        playButton.querySelector('i').classList.add('ri-pause-fill');
+    });
+    
+    mainVideo.addEventListener('pause', function() {
+        playButton.querySelector('i').classList.remove('ri-pause-fill');
+        playButton.querySelector('i').classList.add('ri-play-fill');
+    });
+    
+    // Update time display
+    mainVideo.addEventListener('timeupdate', function() {
+        const currentMinutes = Math.floor(mainVideo.currentTime / 60);
+        const currentSeconds = Math.floor(mainVideo.currentTime % 60).toString().padStart(2, '0');
+        const durationMinutes = Math.floor(mainVideo.duration / 60);
+        const durationSeconds = Math.floor(mainVideo.duration % 60).toString().padStart(2, '0');
+        
+        document.getElementById('timeDisplay').textContent = `${currentMinutes}:${currentSeconds} / ${durationMinutes}:${durationSeconds}`;
+        
+        const progress = (mainVideo.currentTime / mainVideo.duration) * 100;
+        document.querySelector('.video-progress').value = progress;
+    });
+    
+    // Filter products
+    function filterProducts() {
+        const cropType = document.getElementById('cropTypeFilter').value;
+        const season = document.getElementById('seasonFilter').value;
+        const region = document.getElementById('regionFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        
+        const params = new URLSearchParams();
+        if (cropType) params.append('crop_type', cropType);
+        if (season) params.append('season', season);
+        if (region) params.append('region', region);
+        if (status) params.append('status', status);
+        
+        fetch(`{% url 'filter_products' %}?${params.toString()}`)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('productGrid').innerHTML = html;
+            });
+    }
+</script>
+{% endblock %}
