@@ -83,7 +83,7 @@ def get_grok_response(user_message, context):
         response = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",  # Verify actual Grok API endpoint
             headers={
-                "Authorization": "Bearer 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",  # Replace with your Grok API key
+                "Authorization": "Bearer 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",  # Replace with your Grok API key
                 "Content-Type": "application/json"
             },
             json={
